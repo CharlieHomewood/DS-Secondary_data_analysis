@@ -1,0 +1,257 @@
+---
+title: "Take Away Paper"
+output: 
+  html_document
+---
+
+```{r setup, include=FALSE, cache = FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE, message = FALSE, warning = FALSE)
+
+## Remember to load any necessary packages!
+library(tidyverse)
+library(knitr)
+library(readr)
+library(ggfortify)
+library(kableExtra)
+```
+
+## Design
+
+For this assessment, choose from the following two scenarios. More information about both can be found on the [Discovering Statistics Canvas site](https://canvas.sussex.ac.uk/courses/15820/pages/tap-assessment-information) and the [Developmental Psychology Canvas site](https://canvas.sussex.ac.uk/courses/15807).
+
+### Scenario 1: Vocabulary and Storybooks
+
+Building on the work of [Henderson et al. (2021)](https://www.sciencedirect.com/science/article/pii/S0022096521001259#s0110), you will investigate the following research question: do vocabulary and immediate recall of novel words predict recognition of those words the following day?
+
+### Scenario 2: Emotion Regulation
+
+Building on the work of [Bariola et al. (2012)](https://link.springer.com/article/10.1007/s10826-011-9497-5), you will investigate the following research question: do the mother's and father's tendency towards emotional suppression predict their child's?
+
+```{r data, include = FALSE}
+# Choose your scenario by entering either "1" or "2" (don't forget the quotes!)
+scenario <- "2"
+
+# Then run this entire code chunk to read in your data
+data <- readr::read_csv(paste0("https://drmankin.github.io/disc_stats/tap_data_",scenario,".csv"))
+```
+
+<!-- Run the code chunk below to read in the codebook for this dataset. You can view it in the Environment.-->
+
+```{r codebook, include = FALSE}
+codebook <- readr::read_csv(paste0("https://drmankin.github.io/disc_stats/tap_codebook_",scenario,".csv"))
+```
+
+<!-- Use the data to complete the following tasks. Make sure to leave in the code you used. When you're finished, knit your document to HTML and submit the HTML.-->
+
+## Task 1
+
+### 1.1
+
+**Calculate each of the following values using the dataset:**
+
+- The total number of children who participated
+- The number and percentage of male and female children
+- The range, mean and *SD* of the ages of the children
+- The range, mean and *SD* of the ages of the mothers and the fathers
+
+```{r task-1.1}
+# The total number of children who participated
+nrow(data) %>% 
+  knitr::kable(
+    ., 
+    caption = "**The total number of children who participated**",
+    col.names = "*N*",
+    align = 'c'
+  ) %>% 
+kable_styling()
+
+# The number and percentage of male and female children
+data %>% 
+  dplyr::group_by(child_gender) %>% 
+  dplyr::summarise(
+    n = dplyr::n(),
+    Percentage = round((n/nrow(data))*100, 2)
+  ) %>% 
+  knitr::kable(
+    ., 
+    caption = "**The number and percentage of male and female children**",
+    col.names = c("Gender", "*N*", "Percentage")
+  ) %>% 
+kable_styling()
+
+# The range, mean and *SD* of the ages of the children, mothers and fathers
+task1.1_tib <- dplyr::bind_rows(
+  data %>% 
+  dplyr::summarise(
+    Mean = round(mean(child_age), 2),
+    SD = round(sd(child_age), 3),
+    Min = min(child_age),
+    Max = max(child_age)
+  ),
+  data %>% 
+  dplyr::summarise(
+    Mean = mean(mother_age),
+    SD = sd(mother_age),
+    Min = min(mother_age),
+    Max = max(mother_age)
+  ),
+  data %>% 
+  dplyr::summarise(
+    Mean = mean(father_age),
+    SD = sd(father_age),
+    Min = min(father_age),
+    Max = max(father_age)
+  )
+) %>% 
+round(., 2)
+
+rownames(task1.1_tib) <- c("Children", "Mothers", "Fathers")
+
+knitr::kable(
+  task1.1_tib,
+  caption = "**The range, mean and *SD* of the ages of the children, mothers and fathers (measured in years)**"
+) %>% 
+  kable_styling()
+```
+
+### 1.2
+
+**Write a short paragraph in the style of a participants section summarising the descriptive information you calculated in the task above (max 100 words).**
+
+Participants consisted of 126 children (age range 8.00-9.00 years, *M* = 8.40, SD = 0.40), their mothers (age range 25.00-42.00 years, *M* = 32.03, SD = 3.74) and their fathers (age range 25.00-48.00, *M* = 35.41, SD = 4.56). Parents completed the Emotion Regulation Questionnaire (ERQ; Gross and John 2003, cited in Bariola et al., 2012), whilst children completed the Emotion Regulation Questionnaire for Children and Adolescents variant of the ERQ. In total, the number of female children who participated was 73 (57.94% of total), and the number of males was 53 (42.06% of total). 
+
+## Task 2
+
+### 2.1 
+
+**Only for the scenario you have chosen, create two linear models representing the following hypotheses and print out a summary of both models.**
+
+#### Scenario 1 (Language)
+
+- Model 1: Vocabulary score predicts second-day recognition.
+- Model 2: Both vocabulary score and first-day recall predict second-day recognition.
+
+#### Scenario 2 (Emotion Regulation)
+
+- Model 1: Mother's expressive suppression predicts child's suppression. 
+- Model 2: Both mother's and father's expressive suppression predict child's suppression.
+
+```{r task-2.1}
+# Model 1: Mother's expressive suppression predicts child's suppression
+lm_1 <- lm(child_supp ~ mother_supp, data)
+summary(lm_1)
+broom::tidy(lm_1, conf.int = TRUE)
+# Model 2: Both mother's and father's expressive suppression predict child's suppression
+lm_2 <- lm(child_supp ~ mother_supp + father_supp, data) 
+summary(lm_2)
+broom::tidy(lm_2, conf.int = TRUE) 
+```
+
+
+#### 2.2
+
+**Compare the two models and identify which is better, then store that model in a new object called `better_model`.**
+
+```{r task-2.2}
+# comparison of lm_1 and lm_2
+anova(lm_1, lm_2) %>% 
+  broom::tidy()
+
+# better_model object
+better_model <- lm_2
+```
+
+#### 2.3 
+
+**Briefly report how you decided which model was better, including any relevant statistics such as $R^2$ for each model and the results of model comparison tests (max 100 words).** 
+
+An analysis of variance (ANOVA) demonstrated that Model 2 significantly improved the fit of the model compared to Model 1 (*F*(1, 123) = 5.30, *p*<.05). Whilst model 1 explained approximately 18% ($R^2$= .18) of the variance in childrens' expressive suppression scores, model 2 explained approximately 21% ($R^2$ = .21) of the variance in childrens' expressive suppression scores.
+
+### Task 3
+
+#### 3.1 
+
+**Thoroughly check the assumptions of `better_model` and decide which version of the model to report: unadjusted; with robust parameter estimates; with robust standard errors; or bootstrapped. Store the output from the version of the model you choose in a new object called `final_model`.**
+
+```{r task-3.1}
+# Diagnostic plots for better_model
+ggplot2::autoplot(better_model,
+         which = c(1,3,2,4),
+         colour = 'black',
+         size = 1.5,
+         alpha = .5,
+         shape = 'diamond',
+         smooth.colour = 'red',
+        ) +
+theme_light()
+
+# 95% standardised residuals limit (should = ~5%)
+better_model %>% 
+  broom::augment() %>% 
+  dplyr::filter(abs(.std.resid) >= 1.96) %>% 
+  nrow()/nrow(data)*100
+
+# 99% standardised residuals limit (should = ~1%)
+better_model %>% 
+  broom::augment() %>% 
+  dplyr::filter(abs(.std.resid) >= 2.5) %>% 
+  nrow()/nrow(data)*100
+
+# any standardised residuals >= 3? (should = 0)
+better_model %>% 
+  broom::augment() %>% 
+  dplyr::filter(abs(.std.resid) >= 3) %>% 
+  nrow()
+
+# robust parameter estimates for better_model
+robust::lmRob(child_supp ~ mother_supp + father_supp, data) %>% 
+  summary() 
+
+# robust confidence intervals and significance tests
+parameters::parameters(better_model, robust = TRUE, vcov.type = "HC4")
+
+final_model <- parameters::parameters(better_model, robust = TRUE, vcov.type = "HC4")
+```
+
+#### 3.2 
+
+**Report the results of your checks and justify your decision on which model to report as your final model (max 300 words).**
+
+The model satisfies the linearity assumption as the distribution in the residuals-fitted plot is relatively horizontal. Additionally, the assumption of additivity as the combined effect of the mother's and father's expressive suppression scores on children's expressive suppression scores are additive. The assumption of normality of residuals and sampling distribution is also satisfied as the distribution of the Q-Q plot remains positively diagonal throughout. Furthermore, there are no significantly influential cases as demonstrated by the Cook's distance plot: the highest observed Cook's distance being approximately 0.08, which is significantly lower that the threshold of and absolute value of 1. additionally, the expected proportion of cases have standardised residuals within the expected range, and no standardised residuals equal or exceed 3.
+
+One assumption not met by the model however is that of homoscedastic errors. The residuals-fitted plot funnels inwards from left to right, meaning the variance of residual errors is not uniform across the distribution.
+
+As such, it is appropriate to use robust parameter estimates for this model, rather than the unadjusted model. Additionally a bootstrap model is not appropriate since the sample size for this data is not too small (*N* = 126).
+
+### Task 4
+
+#### 4.1
+
+**Create a nicely formatted table to present the results of `final_model` in APA style.**
+
+```{r task-4.1}
+final_model %>% 
+  kable(.,) %>% 
+  kable_styling()
+```
+
+#### 4.2
+
+**Obtain standardised *b*s for the predictor(s).**
+
+```{r task-4.2}
+parameters::model_parameters(better_model, standardise = "refit") %>% 
+  kable(.,) %>% 
+  kable_styling()
+```
+
+mother_supp(b) = 0.42
+
+father_supp(b) = 0.23
+
+#### 4.3
+
+**Interpret (explain) what the statistical results for this model tell you, using your results from the tasks above (max 300 words).**
+
+Results show that parent's combined tendency towards emotional suppression significantly predicts emotional suppression in their children (*F*(1, 123)= 16.74, *P*<0.001). The model predicts a unit increase in the mother and father's score expressive suppression score will lead to an increase of 0.23 in the child's expressive suppression score. 
+
